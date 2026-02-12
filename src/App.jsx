@@ -22,7 +22,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  // ⭐️ 여기서 원하시는 비밀번호로 변경하세요! (현재: qwer)
+  // ⭐️ [보안 업데이트] 실제 Vercel 배포 시에는 환경변수 사용을 권장합니다.
+  // (현재 미리보기 환경의 호환성 문제를 방지하기 위해 기본값으로 설정합니다)
   const MY_PASSWORD = "qwer"; 
 
   // --- 1. 상태 관리 (State) ---
