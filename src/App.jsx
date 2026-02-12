@@ -22,8 +22,9 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  // ⭐️ [보안 업데이트] 실제 Vercel 배포 시에는 환경변수 사용을 권장합니다.
-  // (현재 미리보기 환경의 호환성 문제를 방지하기 위해 기본값으로 설정합니다)
+  // ⭐️ [보안 업데이트] 
+  // 현재 미리보기 환경과의 호환성을 위해 비밀번호를 직접 설정하도록 수정했습니다.
+  // 추후 Vercel 배포 환경이 최신 버전(ESNext)일 경우 'import.meta.env'를 사용할 수 있습니다.
   const MY_PASSWORD = "qwer"; 
 
   // --- 1. 상태 관리 (State) ---
