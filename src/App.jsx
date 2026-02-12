@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Play, Square, Activity, DollarSign, Clock, List, AlertTriangle, 
   ShieldCheck, Server, Database, TrendingUp, TrendingDown, ArrowRightLeft,
-  Cpu, Lock, Settings, Key, X, Save, Sliders
+  Cpu, Lock, Settings, Key, X, Save, Sliders, Unlock
 } from 'lucide-react';
 
 const INITIAL_CASH = 100000000; // 1억 원
@@ -18,6 +18,14 @@ const INITIAL_UNIVERSE = [
 ];
 
 export default function App() {
+  // --- 0. 잠금 화면 (보안) 상태 ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  
+  // ⭐️ 여기서 원하시는 비밀번호로 변경하세요! (현재: qwer)
+  const MY_PASSWORD = "qwer"; 
+
+  // --- 1. 상태 관리 (State) ---
   const [cash, setCash] = useState(INITIAL_CASH);
   const [holdings, setHoldings] = useState({}); 
   const [portfolioHistory, setPortfolioHistory] = useState(Array(HISTORY_LENGTH).fill(INITIAL_CASH));
@@ -70,7 +78,7 @@ export default function App() {
   }, [addLog]);
 
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || !isAuthenticated) return;
 
     const executionInterval = setInterval(() => {
       setOrderQueue(prevQueue => {
@@ -133,10 +141,10 @@ export default function App() {
     }, 1000); 
 
     return () => clearInterval(executionInterval);
-  }, [isRunning, addLog]);
+  }, [isRunning, isAuthenticated, addLog]);
 
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || !isAuthenticated) return;
 
     const dataInterval = setInterval(() => {
       let currentVix = macroData.vix;
@@ -175,7 +183,7 @@ export default function App() {
     }, 2000); 
 
     return () => clearInterval(dataInterval);
-  }, [isRunning, holdings, cash, macroData.vix, allocations, requestOrder]);
+  }, [isRunning, isAuthenticated, holdings, cash, macroData.vix, allocations, requestOrder]);
 
 
   const evaluateStrategy = (currentUniverse, vix, currentTotalAssets) => {
@@ -232,11 +240,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // 모바일 등에서 캔버스가 부모 요소를 따라가도록 동적 리사이징 처리
     const parent = canvas.parentElement;
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
@@ -281,7 +289,7 @@ export default function App() {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-  }, [portfolioHistory, profitRate]);
+  }, [portfolioHistory, profitRate, isAuthenticated]);
 
   const handleToggleRunning = () => {
     if (!isRunning) {
@@ -304,11 +312,58 @@ export default function App() {
     addLog('SYSTEM', 'API 설정이 안전하게 저장되었습니다 (메모리 캐싱).', 'info');
   };
 
+  const handleLogin = () => {
+    if (passwordInput === MY_PASSWORD) {
+      setIsAuthenticated(true);
+    } else {
+      alert("비밀번호가 일치하지 않습니다.");
+      setPasswordInput('');
+    }
+  };
+
+  // ⭐️ 비밀번호를 입력하지 않으면 나타나는 [잠금 화면]
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans">
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full flex flex-col items-center animate-in fade-in zoom-in duration-300">
+          <div className="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center mb-6 border border-blue-800/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+            <Lock className="w-8 h-8 text-blue-400" />
+          </div>
+          <h1 className="text-xl font-bold text-white mb-2">퀀트 대시보드 보안 잠금</h1>
+          <p className="text-slate-400 text-xs mb-8 text-center leading-relaxed">
+            인가된 시스템 관리자만 접근할 수 있습니다.<br/>비밀번호를 입력해 주세요.
+          </p>
+          
+          <div className="w-full relative">
+            <input 
+              type="password"
+              placeholder="••••••••"
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-4 pr-10 py-3 text-white mb-4 focus:outline-none focus:border-blue-500 text-center tracking-widest text-lg transition-colors"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+            />
+            <Key className="absolute right-3 top-3.5 w-5 h-5 text-slate-500" />
+          </div>
+
+          <button 
+            onClick={handleLogin}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center mt-2"
+          >
+            <Unlock className="w-4 h-4 mr-2" /> 시스템 접속
+          </button>
+        </div>
+        <p className="text-slate-600 text-[10px] mt-8">Secure System © AutoTrading AI</p>
+      </div>
+    );
+  }
+
+  // ⭐️ 비밀번호가 맞으면 나타나는 [메인 퀀트 화면]
   return (
     <div className="min-h-screen bg-slate-950 text-slate-300 p-2 sm:p-4 font-sans text-sm overflow-x-hidden">
-      <div className="max-w-7xl mx-auto space-y-4">
+      <div className="max-w-7xl mx-auto space-y-4 animate-in fade-in duration-500">
         
-        {/* 헤더 부분 (모바일에서 세로로 쌓이도록 수정) */}
+        {/* 헤더 부분 */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900 p-4 md:p-5 rounded-xl border border-slate-800 shadow-xl gap-4">
           <div className="flex items-center space-x-3 md:space-x-4">
             <div className="p-2 md:p-3 bg-blue-900/50 rounded-lg shrink-0">
@@ -351,7 +406,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* 멀티 전략 자산 배분 패널 (모바일 대응) */}
+        {/* 멀티 전략 자산 배분 패널 */}
         <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg flex flex-col md:flex-row items-start md:items-center gap-4">
           <div className="text-slate-200 font-bold flex items-center shrink-0 w-full md:w-auto border-b md:border-b-0 border-slate-800 pb-2 md:pb-0">
             <Sliders className="w-4 h-4 md:w-5 md:h-5 mr-2 text-blue-400" /> 
@@ -399,7 +454,7 @@ export default function App() {
           {/* 중앙 메인 패널 */}
           <div className="lg:col-span-3 space-y-4">
             
-            {/* 요약 카드 (모바일 1열, 태블릿 2열, 데스크탑 3열) */}
+            {/* 요약 카드 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="bg-slate-900 p-4 md:p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
                 <div className="flex justify-between items-center mb-2">
@@ -443,7 +498,6 @@ export default function App() {
                   <Activity className="w-4 h-4 md:w-5 md:h-5 mr-2 text-indigo-400"/> 실시간 포트폴리오 성과
                 </h2>
               </div>
-              {/* 차트 영역 높이를 모바일에선 약간 줄임 */}
               <div className="relative h-48 md:h-64 w-full rounded-lg overflow-hidden bg-slate-950 border border-slate-800/50">
                 <canvas 
                   ref={canvasRef} 
@@ -505,7 +559,6 @@ export default function App() {
           </div>
 
           {/* 우측 패널 (주문 엔진 & 보안 시스템 로그) */}
-          {/* 모바일에서는 높이를 고정하여 아래로 배치 */}
           <div className="space-y-4 lg:flex lg:flex-col">
             
             {/* 주문 스케줄러 (대기열) */}
@@ -561,7 +614,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* API 설정 모달 (모바일 최적화) */}
+        {/* API 설정 모달 */}
         {isSettingsOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-slate-900 border border-slate-700 rounded-xl md:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in duration-200">
